@@ -12,17 +12,51 @@ BACKUP_SOURCE="/var/www/faveo"
 MYSQL_HOST="localhost"
 MYSQL_PORT="3306"
 MYSQL_USER="faveo"
-MYSQL_PASSWORD="strongpassword"
+MYSQL_PASSWORD="root"
 
 # Set the database name you want to backup
 DATABASE_NAME="faveo"
 
 # Set the remote server details
-REMOTE_SERVER="root@212.2.246.58"
+REMOTE_HOST="212.2.240.86"
+REMOTE_PORT="22" # Default port is 21 if you have different valuse change it accordingly.
+REMOTE_USER="root"
+REMOTE_PASSWORD="Faveo@123"
 REMOTE_DESTINATION="/home/backup"
 
 # Set the current date as a variable
 CURRENT_DATE=$(date +"%Y-%m-%d_%H-%M-%S")
+
+# Function to install sshpass on Debian-based systems
+install_sshpass_debian() {
+  sudo apt-get update
+  sudo apt-get install -y sshpass
+}
+
+# Function to install sshpass on RHEL-based systems
+install_sshpass_rhel() {
+  sudo yum install -y sshpass
+}
+
+# Function to install sshpass based on the Linux distribution
+install_sshpass() {
+  if [ -x "$(command -v apt-get)" ]; then
+    install_sshpass_debian
+  elif [ -x "$(command -v yum)" ]; then
+    install_sshpass_rhel
+  else
+    echo "Error: Unsupported Linux distribution, cannot install sshpass"
+    exit 1
+  fi
+}
+
+# Check if sshpass is already installed
+if ! command -v sshpass &> /dev/null; then
+  echo "sshpass is not installed. Installing..."
+  install_sshpass
+else
+  echo "sshpass is already installed. Skipping installation."
+fi
 
 # FILE SYSTEM BACKUP:
 File_System_Backup() {
@@ -43,8 +77,9 @@ MySQL_Backup() {
 
 # Transfer backup files to remote server using rsync
 Transfer_Backup() {
-  rsync -avz --progress --delete "$BACKUP_DIRECTORY/" "$REMOTE_SERVER:$REMOTE_DESTINATION" || { echo "Error: Failed to transfer backup files to remote server"; exit 1; }
-  echo "Backup files transferred successfully to remote server"
+   #sshpass -p "$REMOTE_PASSWORD" rsync -avz --progress --delete "$BACKUP_DIRECTORY/" "$REMOTE_SERVER:$REMOTE_DESTINATION" || { echo "Error: Failed to transfer backup files to remote server"; exit 1; }
+   sshpass -p "$REMOTE_PASSWORD" rsync -avz --progress -e "ssh -p $REMOTE_PORT" "$BACKUP_DIRECTORY/" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DESTINATION" || { echo "Error: Failed to transfer backup files to remote server"; exit 1; }
+   echo "Backup files transferred successfully to remote server"
 }
 
 # Purge_Old_Backup
@@ -61,6 +96,9 @@ else
   exit 1
 fi
 
+
 #*/5 * * * * /bin/bash /root/rsync.sh >> /home/backup/rsync.log 2>&1
+
+
 #ssh-keygen -t rsa
 #ssh-copy-id remote_user@remote_host

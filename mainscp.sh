@@ -27,6 +27,38 @@ REMOTE_PORT="22" # Default SSH port
 REMOTE_DIRECTORY="/home/backup"
 REMOTE_PASSWORD="Faveo@123"
 
+# Function to install sshpass on Debian-based systems
+install_sshpass_debian() {
+  sudo apt-get update
+  sudo apt-get install -y sshpass
+}
+
+# Function to install sshpass on RHEL-based systems
+install_sshpass_rhel() {
+  sudo yum update
+  sudo yum install -y sshpass
+}
+
+# Function to install sshpass based on the Linux distribution
+install_sshpass() {
+  if [ -x "$(command -v apt-get)" ]; then
+    install_sshpass_debian
+  elif [ -x "$(command -v yum)" ]; then
+    install_sshpass_rhel
+  else
+    echo "Error: Unsupported Linux distribution, cannot install sshpass"
+    exit 1
+  fi
+}
+
+# Check if sshpass is already installed
+if ! command -v sshpass &> /dev/null; then
+  echo "sshpass is not installed. Installing..."
+  install_sshpass
+else
+  echo "sshpass is already installed. Skipping installation."
+fi
+
 # FILE SYSTEM BACKUP:
 File_System_Backup() {
   BACKUP_FILE="$BACKUP_DIRECTORY/filesystem-backup-$CURRENT_DATE.tar.gz"
